@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sektor-Regime-Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a; --panel:#111110; --panel2:#161614; --line:#2a2a26;
+  --amber:#ffb000; --amber-dim:#9a6c00; --amber-faint:#3d2f00;
+  --green:#2ecc71; --green-dim:#1a5c36; --red:#e74c3c; --red-dim:#5c1e17;
+  --txt:#e8e0cc; --muted:#8a8672; --faint:#55523f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.5;padding:16px}
+.wrap{max-width:1240px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--amber-dim);padding-bottom:8px;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+h1{font-size:16px;font-weight:600;color:var(--amber);letter-spacing:1px}
+h1 span{color:var(--muted);font-weight:400}
+.stamp{font-size:11px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:340px 1fr;gap:14px}
+@media(max-width:920px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);padding:12px}
+.panel h2{font-size:11px;font-weight:600;color:var(--amber);letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:10px}
+.inp{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.inp label{color:var(--muted);font-size:11px;flex:1}
+.inp input[type=number],.inp select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:12px;padding:3px 6px;width:110px;text-align:right}
+.inp input:focus,.inp select:focus{outline:1px solid var(--amber-dim)}
+button{background:var(--amber-faint);border:1px solid var(--amber-dim);color:var(--amber);font-family:inherit;font-size:12px;padding:7px 12px;cursor:pointer;width:100%;letter-spacing:0.5px}
+button:hover{background:var(--amber-dim);color:#000}
+button:disabled{opacity:.45;cursor:wait}
+.status{font-size:11px;color:var(--muted);margin-top:8px;min-height:16px;white-space:pre-wrap}
+.status.err{color:var(--red)}
+.status.ok{color:var(--green)}
+.regimebar{display:flex;height:26px;border:1px solid var(--line);margin-bottom:6px;overflow:hidden}
+.regimebar div{display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:600;white-space:nowrap;overflow:hidden;transition:width .4s}
+.rleg{display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--muted);margin-bottom:10px}
+.rleg i{display:inline-block;width:9px;height:9px;margin-right:4px}
+.callout{border:1px solid var(--amber-dim);background:var(--panel2);padding:8px 10px;margin-bottom:12px;font-size:12px}
+.callout b{color:var(--amber)}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;color:var(--muted);text-align:left;font-weight:400;letter-spacing:1px;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:5px 6px;border-bottom:1px solid #1c1c19;font-size:12px;vertical-align:middle}
+tr.sec{cursor:pointer}
+tr.sec:hover td{background:var(--panel2)}
+.score{text-align:right;font-weight:600;width:60px}
+.pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--muted)}
+.barcell{width:42%}
+.bar{display:flex;height:12px;align-items:center}
+.bar .mid{width:1px;height:12px;background:var(--faint)}
+.bar .half{flex:1;position:relative;height:8px}
+.bar .fill{position:absolute;top:0;height:8px;transition:width .4s}
+.bar .half.l .fill{right:0;background:var(--red)}
+.bar .half.r .fill{left:0;background:var(--green)}
+.tag{font-size:10px;padding:1px 6px;border:1px solid;letter-spacing:1px}
+.tag.long{color:var(--green);border-color:var(--green-dim)}
+.tag.short{color:var(--red);border-color:var(--red-dim)}
+.tag.neut{color:var(--muted);border-color:var(--line)}
+.detail{display:none;background:var(--panel2)}
+.detail td{padding:8px 10px;font-size:11px;color:var(--muted)}
+.detail .cells{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.detail .cells span{border:1px solid var(--line);padding:2px 7px;font-size:11px}
+.pairs{margin-top:14px}
+.pairs .pr{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--line);padding:6px 10px;margin-bottom:6px;font-size:12px}
+.pairs .pr b.l{color:var(--green)} .pairs .pr b.s{color:var(--red)}
+.axes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.ax{border:1px solid var(--line);padding:6px 8px;text-align:center}
+.ax .v{font-size:16px;font-weight:600;color:var(--amber)}
+.ax .l{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.foot{margin-top:14px;border-top:1px solid var(--line);padding-top:8px;font-size:10px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>SEKTOR-REGIME-TERMINAL <span>// Investment Clock + Zinsschock-Overlay</span></h1>
+  <div class="stamp" id="stamp">Datenstand: manuell (Vorbelegung 17.07.2026)</div>
+</header>
+
+<div class="grid">
+  <div>
+    <div class="panel">
+      <h2>Makro-Inputs</h2>
+      <div class="inp"><label>ISM Manufacturing (Niveau)</label><input type="number" id="ism" value="53.3" step="0.1"></div>
+      <div class="inp"><label>ISM &Delta; zum Vormonat</label><input type="number" id="ismD" value="-0.7" step="0.1"></div>
+      <div class="inp"><label>Nonfarm Payrolls (Tsd.)</label><input type="number" id="nfp" value="57" step="1"></div>
+      <div class="inp"><label>CPI y/y (%)</label><input type="number" id="cpi" value="3.5" step="0.1"></div>
+      <div class="inp"><label>Kern-CPI y/y (%)</label><input type="number" id="core" value="2.6" step="0.1"></div>
+      <div class="inp"><label>CPI-Trend (3M)</label><select id="cpiT"><option value="1">steigend</option><option value="0">seitw&auml;rts</option><option value="-1" selected>fallend</option></select></div>
+      <div class="inp"><label>&Ouml;lpreis-Trend (3M)</label><select id="oil"><option value="1" selected>steigend</option><option value="0">seitw&auml;rts</option><option value="-1">fallend</option></select></div>
+      <div class="inp"><label>Fed-Bias</label><select id="fed"><option value="1" selected>Erh&ouml;hung</option><option value="0">neutral / Pause</option><option value="-1">Senkung</option></select></div>
+      <div class="inp"><label>10y-Realzins-Richtung</label><select id="ry"><option value="1" selected>steigend</option><option value="0">seitw&auml;rts</option><option value="-1">fallend</option></select></div>
+      <div class="inp"><label>VIX (Niveau)</label><input type="number" id="vix" value="18" step="0.1"></div>
+      <button id="liveBtn" onclick="directUpdate()">&#9654; DATEN AKTUALISIEREN (FRED direkt)</button>
+<button id="wsBtn" onclick="liveUpdate()" style="margin-top:6px;background:var(--p2,#161614);border:1px solid var(--line);color:var(--mut)">Alternative: Claude-Websuche (nur in Claude.ai)</button>
+<div class="inp" style="margin-top:8px"><label>Auto-Update (beim &Ouml;ffnen + alle 30 Min)</label>
+<select id="autoUpd"><option value="1" selected>AN</option><option value="0">AUS</option></select></div>
+      <div class="status" id="status">Werte manuell editierbar &ndash; Engine rechnet sofort neu.</div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h2>Engine-Logik</h2>
+      <div style="font-size:11px;color:var(--muted)">
+        Wachstumsachse G aus ISM-Niveau, ISM-&Delta; und Payrolls. Inflationsachse I aus CPI vs. 2%-Ziel, Kernrate, CPI- und &Ouml;l-Trend. Zinsimpuls Z aus Fed-Bias und Realzinsrichtung.<br><br>
+        Quadranten-Gewichte: pG&times;(1&minus;pI), pG&times;pI, (1&minus;pG)&times;pI, (1&minus;pG)&times;(1&minus;pI) mit pG=(1+G)/2, pI=(1+I)/2. Zinsschock-Spalte wird mit Gewicht z=max(0,Z)/2 &uuml;berblendet. VIX&gt;28 d&auml;mpft alle Spreads (Korrelationskonvergenz).<br><br>
+        Sektorscore = &Sigma; Regimegewicht &times; Matrixwert (&minus;2&hellip;+2). Long ab +0.5, Short ab &minus;0.5.
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Regime-Klassifikation</h2>
+      <div class="axes">
+        <div class="ax"><div class="v" id="axG">&ndash;</div><div class="l">Wachstum G</div></div>
+        <div class="ax"><div class="v" id="axI">&ndash;</div><div class="l">Inflation I</div></div>
+        <div class="ax"><div class="v" id="axZ">&ndash;</div><div class="l">Zinsimpuls Z</div></div>
+      </div>
+      <div class="regimebar" id="rbar"></div>
+      <div class="rleg">
+        <span><i style="background:#5DCAA5"></i>Goldilocks</span>
+        <span><i style="background:#EF9F27"></i>&Uuml;berhitzung</span>
+        <span><i style="background:#E24B4A"></i>Stagflation</span>
+        <span><i style="background:#85B7EB"></i>Rezession</span>
+        <span><i style="background:#AFA9EC"></i>Zinsschock</span>
+      </div>
+      <div class="callout" id="verdict"></div>
+
+      <h2>Sektor-Ranking (relative Erwartung)</h2>
+      <table>
+        <thead><tr><th>Sektor</th><th class="barcell">Short &larr;&nbsp;&nbsp;&rarr; Long</th><th style="text-align:right">Score</th><th style="text-align:right">Signal</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+
+      <div class="pairs">
+        <h2>Abgeleitete Spread-Paare</h2>
+        <div id="pairs"></div>
+      </div>
+      <div class="foot">
+        Relative Signale ggü. Gesamtmarkt, kein Markt-Timing, keine Anlageberatung. Matrixwerte: schematische Sektor-Rotations-Logik (Stand Juli 2026). Bei VIX &gt; 28 konvergieren Sektorkorrelationen &ndash; Spreads dann unzuverl&auml;ssig.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script id="livedata" type="application/json">
+{"ism": 53.3, "ismDelta": -0.7, "cpi": 3.5, "core": 2.6, "cpiTrend": 1, "nfp": 57, "fedBias": 1, "oilTrend": -1, "vix": 18.8, "realYield": 1, "asOf": "20.07.2026 17:28", "source": "auto", "vixPct": 0.63}
+</script>
+<script>
+const SECTORS = [
+  ["Technologie",        [ 2,-1,-2, 1,-1]],
+  ["Zykl. Konsum",       [ 2, 0,-2,-2,-1]],
+  ["Kommunikation",      [ 1,-1,-1, 0,-1]],
+  ["Industrie",          [ 1, 1,-1,-2, 0]],
+  ["Finanzen",           [ 1, 1,-1,-2, 2]],
+  ["Energie",            [-1, 2, 2,-2, 1]],
+  ["Industrierohstoffe", [ 0, 2, 1,-1, 0]],
+  ["Gold / Edelmetalle", [-1, 1, 2, 1,-2]],
+  ["Gesundheit",         [ 0, 0, 1, 2, 0]],
+  ["Basiskonsum",        [-1,-1, 1, 2,-1]],
+  ["Versorger",          [-1,-2, 0, 2,-2]],
+  ["Immobilien",         [ 1,-2,-1, 1,-2]],
+];
+const RCOLORS = ["#5DCAA5","#EF9F27","#E24B4A","#85B7EB","#AFA9EC"];
+const RNAMES = ["Goldilocks","\u00DCberhitzung","Stagflation","Rezession","Zinsschock"];
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+
+function readInputs(){
+  return {
+    ism:+document.getElementById('ism').value, ismD:+document.getElementById('ismD').value,
+    nfp:+document.getElementById('nfp').value, cpi:+document.getElementById('cpi').value,
+    core:+document.getElementById('core').value, cpiT:+document.getElementById('cpiT').value,
+    oil:+document.getElementById('oil').value, fed:+document.getElementById('fed').value,
+    ry:+document.getElementById('ry').value, vix:+document.getElementById('vix').value
+  };
+}
+
+function engine(d){
+  const G = clamp( clamp((d.ism-50)/5,-1,1)*0.55 + clamp(d.ismD/1.5,-1,1)*0.20 + clamp((d.nfp-120)/150,-1,1)*0.25, -1, 1);
+  const I = clamp( clamp((d.cpi-2)/2.5,-1,1)*0.45 + clamp((d.core-2)/2,-1,1)*0.25 + d.cpiT*0.15 + d.oil*0.15, -1, 1);
+  const Z = clamp( d.fed*0.6 + d.ry*0.4, -1, 1);
+  const pG=(1+G)/2, pI=(1+I)/2;
+  let q=[pG*(1-pI), pG*pI, (1-pG)*pI, (1-pG)*(1-pI)];
+  const z = Math.max(0,Z)/2;
+  let w=[q[0]*(1-z), q[1]*(1-z), q[2]*(1-z), q[3]*(1-z), z];
+  const s=w.reduce((a,b)=>a+b,0); w=w.map(x=>x/s);
+  const damp = d.vix>28 ? clamp(1-(d.vix-28)/20, 0.25, 1) : 1;
+  const scores = SECTORS.map(([name,m])=>{
+    const raw = m.reduce((acc,v,i)=>acc+v*w[i],0)*damp;
+    return {name, score: raw};
+  }).sort((a,b)=>b.score-a.score);
+  return {G,I,Z,w,damp,scores};
+}
+
+function fmt(x){ return (x>=0?"+":"\u2212")+Math.abs(x).toFixed(2); }
+
+function render(){
+  const d = readInputs();
+  const r = engine(d);
+  document.getElementById('axG').textContent = fmt(r.G);
+  document.getElementById('axI').textContent = fmt(r.I);
+  document.getElementById('axZ').textContent = fmt(r.Z);
+
+  const rbar = document.getElementById('rbar'); rbar.innerHTML='';
+  r.w.forEach((wi,i)=>{
+    const div=document.createElement('div');
+    div.style.width=(wi*100)+'%'; div.style.background=RCOLORS[i];
+    if(wi>0.12) div.textContent=RNAMES[i]+' '+Math.round(wi*100)+'%';
+    div.title=RNAMES[i]+' '+Math.round(wi*100)+'%';
+    rbar.appendChild(div);
+  });
+
+  const top = r.w.map((wi,i)=>({wi,i})).sort((a,b)=>b.wi-a.wi);
+  let verdict = `<b>Dominantes Regime: ${RNAMES[top[0].i]} (${Math.round(top[0].wi*100)}%)</b>, gefolgt von ${RNAMES[top[1].i]} (${Math.round(top[1].wi*100)}%). `;
+  if(r.Z>0.3) verdict += `Aktiver Zinsimpuls nach oben &ndash; Duration-sensitive Sektoren belastet. `;
+  if(r.Z<-0.3) verdict += `Zinsimpuls nach unten &ndash; Duration und Gold gest&uuml;tzt. `;
+  if(d.vix>28) verdict += `<span style="color:var(--red)">VIX ${d.vix}: Stressregime &ndash; Spreads ged&auml;mpft (Faktor ${r.damp.toFixed(2)}), Korrelationskonvergenz-Risiko.</span>`;
+  document.getElementById('verdict').innerHTML = verdict;
+
+  const tbody=document.getElementById('rows'); tbody.innerHTML='';
+  const maxAbs = Math.max(0.6, ...r.scores.map(s=>Math.abs(s.score)));
+  r.scores.forEach((s,idx)=>{
+    const tr=document.createElement('tr'); tr.className='sec';
+    const cls = s.score>=0.5?'pos':(s.score<=-0.5?'neg':'neu');
+    const tag = s.score>=0.5?'<span class="tag long">LONG</span>':(s.score<=-0.5?'<span class="tag short">SHORT</span>':'<span class="tag neut">NEUTRAL</span>');
+    const l = s.score<0? (Math.abs(s.score)/maxAbs*100):0;
+    const g = s.score>0? (s.score/maxAbs*100):0;
+    tr.innerHTML = `<td>${s.name}</td>
+      <td class="barcell"><div class="bar"><div class="half l"><div class="fill" style="width:${l}%"></div></div><div class="mid"></div><div class="half r"><div class="fill" style="width:${g}%"></div></div></div></td>
+      <td class="score ${cls}">${fmt(s.score)}</td>
+      <td style="text-align:right">${tag}</td>`;
+    const det=document.createElement('tr'); det.className='detail'; det.id='det'+idx;
+    const m = SECTORS.find(x=>x[0]===s.name)[1];
+    const cells = m.map((v,i)=>{
+      const col = v>0?'var(--green)':(v<0?'var(--red)':'var(--muted)');
+      const lbl = v===2?'++':(v===1?'+':(v===0?'0':(v===-1?'\u2212':'\u2212\u2212')));
+      return `<span style="color:${col}">${RNAMES[i]} ${lbl} <span style="color:var(--faint)">&times;${Math.round(r.w[i]*100)}%</span></span>`;
+    }).join('');
+    det.innerHTML = `<td colspan="4">Beitragszerlegung:<div class="cells">${cells}</div></td>`;
+    tr.onclick=()=>{ det.style.display = det.style.display==='table-row'?'none':'table-row'; };
+    tbody.appendChild(tr); tbody.appendChild(det);
+  });
+
+  const longs = r.scores.filter(s=>s.score>=0.5).slice(0,3);
+  const shorts = r.scores.filter(s=>s.score<=-0.5).slice(-3).reverse();
+  const pd=document.getElementById('pairs'); pd.innerHTML='';
+  if(longs.length && shorts.length){
+    const n=Math.min(longs.length, shorts.length, 3);
+    for(let i=0;i<n;i++){
+      const div=document.createElement('div'); div.className='pr';
+      const sp=(longs[i].score-shorts[i].score).toFixed(2);
+      div.innerHTML=`<span><b class="l">LONG ${longs[i].name}</b> / <b class="s">SHORT ${shorts[i].name}</b></span><span style="color:var(--amber)">Spread ${sp}</span>`;
+      pd.appendChild(div);
+    }
+  } else {
+    pd.innerHTML='<div style="color:var(--muted);font-size:11px">Kein Paar mit ausreichender Signalst&auml;rke (|Score| &ge; 0.5) auf beiden Seiten.</div>';
+  }
+}
+
+function applyData(j, label){
+  const set=(id,v)=>{ if(v!==undefined&&v!==null&&!Number.isNaN(+v)) document.getElementById(id).value=+v; };
+  const setSel=(id,v)=>{ if(v===1||v===0||v===-1) document.getElementById(id).value=String(v); };
+  set('ism',j.ism); set('ismD',j.ismDelta); set('cpi',j.cpi); set('core',j.core);
+  set('nfp',j.nfp); set('vix',j.vix);
+  setSel('cpiT',j.cpiTrend); setSel('oil',j.oilTrend); setSel('fed',j.fedBias); setSel('ry',j.realYield);
+  document.getElementById('stamp').textContent='Datenstand: '+(label||'')+' \u00B7 '+(j.asOf||'unbekannt');
+}
+try{
+  const embedded = JSON.parse(document.getElementById('livedata').textContent);
+  applyData(embedded, embedded.source==='auto' ? 'auto (Skript)' : 'eingebettet');
+}catch(e){ /* Vorbelegung aus den Feldern bleibt */ }
+
+document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',render));
+render();
+
+async function liveUpdate(){
+  const btn=document.getElementById('liveBtn'), st=document.getElementById('status');
+  btn.disabled=true; st.className='status'; st.textContent='Suche aktuelle Makrodaten \u2026 (ca. 20\u201340s)';
+  try{
+    const prompt = `Search the web for the most recent US macro data. Find: (1) latest ISM Manufacturing PMI level and its change vs prior month, (2) latest US CPI year-over-year percent and core CPI year-over-year percent, and whether headline CPI has been rising or falling over the last 3 months, (3) latest monthly nonfarm payrolls in thousands, (4) current Federal Reserve policy bias: is the next likely move a hike, hold, or cut, (5) WTI crude oil 3-month price trend: rising, flat, or falling, (6) current VIX level, (7) direction of the US 10-year real yield (TIPS) over recent weeks: rising, flat, or falling. Respond ONLY with a JSON object, no markdown fences, no preamble, exactly this schema: {"ism": number, "ismDelta": number, "cpi": number, "core": number, "cpiTrend": 1|0|-1, "nfp": number, "fedBias": 1|0|-1, "oilTrend": 1|0|-1, "vix": number, "realYield": 1|0|-1, "asOf": "short date string"} where 1=rising/hike, 0=flat/hold, -1=falling/cut.`;
+    const resp = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-6", max_tokens:1000,
+        messages:[{role:"user",content:prompt}],
+        tools:[{type:"web_search_20250305",name:"web_search"}]})
+    });
+    const data = await resp.json();
+    if(data.error) throw new Error(data.error.message||'API-Fehler');
+    const text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const m = text.match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('Keine JSON-Antwort erkennbar.');
+    const j = JSON.parse(m[0].replace(/```json|```/g,'').trim());
+    applyData(j, 'live (Claude-Websuche)');
+    st.className='status ok'; st.textContent='Live-Daten \u00FCbernommen. Engine aktualisiert.';
+    render();
+  }catch(e){
+    st.className='status err'; st.textContent='Live-Update fehlgeschlagen: '+e.message+'\nManuelle Eingabe bleibt aktiv.';
+  }finally{ btn.disabled=false; }
+}
+
+
+// --- Direkt-Update: FRED im Browser, CORS-Proxy-Fallback-Kette (keine Claude-API noetig) ---
+async function fetchText(url){
+  const wraps=[u=>u,
+    u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+    u=>'https://corsproxy.io/?url='+encodeURIComponent(u)];
+  let lastErr=null;
+  for(const w of wraps){
+    try{const r=await fetch(w(url),{cache:'no-store'});
+      if(r.ok){const t=await r.text();if(t&&t.length>50&&t.indexOf('<html')<0)return t;}
+    }catch(e){lastErr=e;}
+  }
+  throw new Error('Quelle nicht erreichbar: '+url.split('?')[0].split('/').pop());
+}
+function parseFred(csv){
+  const out=[];
+  for(const line of csv.split('\n')){
+    const c=line.trim().split(',');
+    if(c.length!==2||c[0]==='DATE'||c[0]==='observation_date')continue;
+    const v=parseFloat(c[1]);
+    if(!isNaN(v))out.push([c[0],v]);
+  }
+  if(!out.length)throw new Error('FRED leer');
+  return out;
+}
+const fredURL=(id,days)=>{
+  const d=new Date(Date.now()-days*86400000).toISOString().slice(0,10);
+  return 'https://fred.stlouisfed.org/graph/fredgraph.csv?id='+id+'&cosd='+d;
+};
+function yoyF(rows){
+  const [ld,lv]=rows[rows.length-1];
+  const target=(parseInt(ld.slice(0,4))-1)+ld.slice(4);
+  let best=rows[0],bd=1e9;
+  for(const r of rows){const d=Math.abs(new Date(r[0])-new Date(target));if(d<bd){bd=d;best=r;}}
+  return Math.round((lv/best[1]-1)*1000)/10;
+}
+function trendF(rows,lbDays,band){
+  const [ld,lv]=rows[rows.length-1];
+  const t=new Date(new Date(ld)-lbDays*86400000);
+  let best=rows[0],bd=1e9;
+  for(const r of rows){const d=Math.abs(new Date(r[0])-t);if(d<bd){bd=d;best=r;}}
+  const ch=(lv-best[1])/Math.abs(best[1]||1);
+  return ch>band?1:(ch<-band?-1:0);
+}
+async function directUpdate(){
+  const btn=document.getElementById('liveBtn'),st=document.getElementById('status');
+  btn.disabled=true;st.className='status';st.textContent='Lade FRED-Daten \u2026';
+  const j={};const errs=[];
+  async function grab(id,days,fn){
+    try{const rows=parseFred(await fetchText(fredURL(id,days)));fn(rows);}
+    catch(e){errs.push(id);}
+  }
+  await grab('CPIAUCSL',900,rows=>{
+    j.cpi=yoyF(rows);
+    const older=rows.slice(0,-3);
+    if(older.length>15){const d=j.cpi-yoyF(older);j.cpiTrend=d>0.15?1:(d<-0.15?-1:0);}
+  });
+  await grab('CPILFESL',900,rows=>{j.core=yoyF(rows);});
+  await grab('PAYEMS',900,rows=>{if(rows.length>=2)j.nfp=Math.round(rows[rows.length-1][1]-rows[rows.length-2][1]);});
+  await grab('DFII10',400,rows=>{j.realYield=trendF(rows,28,0.03);});
+  await grab('DCOILWTICO',400,rows=>{j.oilTrend=trendF(rows,90,0.05);});
+  await grab('VIXCLS',3700,rows=>{
+    const vals=rows.map(r=>r[1]);const cur=vals[vals.length-1];
+    j.vix=Math.round(cur*10)/10;
+    j.vixPct=Math.round(vals.filter(v=>v<=cur).length/vals.length*100)/100;
+  });
+  btn.disabled=false;
+  if(Object.keys(j).length===0){
+    st.className='status err';
+    st.textContent='Alle Quellen fehlgeschlagen (Netz/Proxys nicht erreichbar). Eingebettete Werte bleiben aktiv \u2013 lokale Automatik: update_terminal.py per Cron/Task-Scheduler.';
+    return;
+  }
+  // ISM / Fed-Bias bleiben aus den Feldern (manuell gepflegt)
+  j.ism=+document.getElementById('ism').value; j.ismDelta=+document.getElementById('ismD').value;
+  j.fedBias=+document.getElementById('fed').value;
+  j.asOf=new Date().toLocaleDateString('de-DE')+' '+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+  applyData(j,'auto (FRED direkt)');
+  st.className='status ok';
+  st.textContent='Aktualisiert.'+(errs.length?' Teilweise fehlgeschlagen: '+errs.join(', ')+' (alte Werte behalten).':'')+' ISM/Fed-Bias: manuell (Monats-Release).';
+  render();
+}
+// --- Lokale Datendatei (vom Update-Skript update_terminal.py geschrieben) ---
+// Wird nur gefunden, wenn die Seite ueber einen lokalen Server (http://localhost)
+// geoeffnet ist. Beim direkten Datei-Aufruf (file://) blockt Chrome den Zugriff -->
+// dann greifen automatisch die eingebetteten Werte, die das Skript ebenfalls pflegt.
+async function loadLocalData(){
+  try{
+    const r = await fetch('livedata.json?ts='+Date.now(), {cache:'no-store'});
+    if(!r.ok) return false;
+    const j = await r.json();
+    if(j && (j.cpi!==undefined || j.vix!==undefined)){
+      applyData(j, 'auto (lokales Skript)');
+      render();
+      return true;
+    }
+  }catch(e){ /* file:// oder Datei fehlt -> Fallback */ }
+  return false;
+}
+
+// --- Automatisierung: beim Oeffnen + Intervall, mit gestufter Fallback-Kette ---
+// 1) livedata.json (vom Cron/Task-Scheduler-Skript, zuverlaessig)
+// 2) FRED direkt im Browser (CORS-Proxys, wackelig)
+// 3) eingebettete Werte (immer vorhanden, vom Skript mitgepflegt)
+let autoTimer=null;
+async function autoUpdate(silent){
+  if(document.getElementById('autoUpd').value!=='1')return;
+  const st=document.getElementById('status');
+  if(await loadLocalData()){
+    st.className='status ok';
+    st.textContent='Daten aus livedata.json (lokales Update-Skript) uebernommen \u00b7 '+
+      (document.getElementById('stamp').textContent.replace('Datenstand: ','')||'');
+    return;
+  }
+  try{ await directUpdate(); }
+  catch(e){ /* liveUpdate faengt selbst */ }
+  if(st.classList.contains('err')){
+    st.textContent='Auto-Update im Browser fehlgeschlagen (Netz/Proxys nicht erreichbar). '+
+      'Fuer zuverlaessige lokale Automatik: update_terminal.py per Task-Scheduler/Cron \u2013 '+
+      'dann zeigt die Datei beim \u00d6ffnen automatisch den letzten Skript-Stand ('+
+      (JSON.parse(document.getElementById('livedata').textContent).asOf||'')+').';
+    st.className='status';
+  }
+}
+document.getElementById('autoUpd').addEventListener('change',()=>{
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  if(document.getElementById('autoUpd').value==='1'){autoUpdate(true);autoTimer=setInterval(()=>autoUpdate(true),30*60*1000);}
+});
+window.addEventListener('load',()=>{
+  setTimeout(()=>{autoUpdate(true);},600);
+  autoTimer=setInterval(()=>autoUpdate(true),30*60*1000);
+});
+</script>
+</body>
+</html>

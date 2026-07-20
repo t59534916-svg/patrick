@@ -1,0 +1,15 @@
+{
+  "ism": 53.3,
+  "ismDelta": -0.7,
+  "cpi": 3.5,
+  "core": 2.6,
+  "cpiTrend": 1,
+  "nfp": 57,
+  "fedBias": 1,
+  "oilTrend": -1,
+  "vix": 18.8,
+  "realYield": 1,
+  "asOf": "20.07.2026 17:28",
+  "source": "auto",
+  "vixPct": 0.63
+}

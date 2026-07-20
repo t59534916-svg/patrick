@@ -1,0 +1,46 @@
+name: Terminal-Daten aktualisieren
+
+# Holt zeitgesteuert die aktuellen FRED-Makrodaten und committet die
+# aktualisierten Dateien (livedata.json + eingebetteter Block in der HTML).
+# In Verbindung mit GitHub Pages ist das Terminal so von ueberall im Browser
+# erreichbar und haelt sich selbst aktuell -- ganz ohne laufenden lokalen Rechner.
+#
+# Hinweis: Zeitplan-Workflows laufen nur auf dem Standard-Branch. Diese Datei
+# wird also erst aktiv, nachdem sie in den Default-Branch (main) gemergt ist.
+
+on:
+  schedule:
+    - cron: "30 22 * * 1-5"   # werktags 22:30 UTC (~nach US-Handelsschluss)
+  workflow_dispatch: {}        # manuell ausloesbar (Actions-Tab -> Run workflow)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-terminal
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: FRED-Daten holen und Dateien aktualisieren
+        run: python update_terminal.py || echo "Teil-/Totalausfall - alte Werte bleiben erhalten"
+
+      - name: Aenderungen committen (nur falls vorhanden)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- livedata.json sektor-regime-terminal.html; then
+            git add livedata.json sektor-regime-terminal.html
+            git commit -m "chore: Terminal-Daten aktualisiert (FRED) [skip ci]"
+            git push
+          else
+            echo "Keine Datenaenderung - kein Commit."
+          fi
