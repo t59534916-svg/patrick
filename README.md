@@ -23,7 +23,10 @@ oder lokaler Server) **oder im Browser** (auch online) aufrufbar.
 | `run_update.sh` / `run_update.bat` | Wrapper für Cron (Linux/macOS) bzw. Aufgabenplaner (Windows). |
 | `.github/workflows/update.yml` | Optional: aktualisiert die Daten online per GitHub Actions. |
 
-**Voraussetzung:** Python ≥ 3.8. **Keine** Installation nötig (nur Standardbibliothek).
+**Voraussetzung:** Python ≥ 3.8. **Keine** Installation nötig (nur
+Standardbibliothek). Der Abruf läuft bevorzugt über das überall vorinstallierte
+`curl` (mit automatischem Fallback) und mit Standard-Kennungen — FREDs Firewall
+blockt unbekannte User-Agents.
 
 ---
 

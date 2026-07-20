@@ -31,8 +31,10 @@ import json
 import os
 import re
 import ssl
+import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
@@ -63,16 +65,50 @@ MANUAL_KEYS = {"ism": float, "ismDelta": float, "fedBias": int}
 # ---------------------------------------------------------------------------
 # Abruf & Parsing
 # ---------------------------------------------------------------------------
-def fetch_text(url):
-    """CSV von FRED holen. Nutzt System-CAs bzw. SSL_CERT_FILE und respektiert
+"""WICHTIG: Keinen eigenen User-Agent setzen! FREDs Firewall blockt unbekannte
+Kennungen (Verbindungsabbruch bzw. Timeout), waehrend die Standard-Kennungen
+von curl und urllib anstandslos durchgelassen werden. Empirisch verifiziert --
+ein selbstgewaehlter UA war die Ursache fuer Totalausfaelle lokal wie auf
+GitHub-Actions-Runnern."""
+
+
+def _curl_fetch(url):
+    """Primaerer Abruf via curl-Subprozess (auf Linux, macOS, Windows 10+ und
+    GitHub-Runnern vorinstalliert); fehlt curl, greift der urllib-Fallback."""
+    out = subprocess.run(
+        ["curl", "-sS", "--fail", "-L", "--max-time", str(TIMEOUT), url],
+        capture_output=True, text=True, timeout=TIMEOUT + 10)
+    if out.returncode != 0 or not out.stdout:
+        raise OSError("curl: " + (out.stderr.strip()[:160] or "leere Antwort"))
+    return out.stdout
+
+
+def _urllib_fetch(url):
+    """Fallback ohne curl. Nutzt System-CAs bzw. SSL_CERT_FILE und respektiert
     HTTPS_PROXY automatisch (Standard-Opener von urllib)."""
     ctx = ssl.create_default_context()
-    req = Request(url, headers={"User-Agent": "sektor-regime-terminal/1.0"})
-    with urlopen(req, timeout=TIMEOUT, context=ctx) as resp:
-        text = resp.read().decode("utf-8", "replace")
-    if len(text) < 20 or "<html" in text.lower():
-        raise ValueError("unerwartete Antwort (kein CSV)")
-    return text
+    with urlopen(Request(url), timeout=TIMEOUT, context=ctx) as resp:
+        return resp.read().decode("utf-8", "replace")
+
+
+def fetch_text(url):
+    """CSV von FRED holen: curl zuerst (WAF-vertraeglich), urllib als Fallback;
+    insgesamt 2 Runden mit kurzer Pause gegen transiente Drosselung."""
+    last = None
+    for attempt in (1, 2):
+        for fetcher in (_curl_fetch, _urllib_fetch):
+            try:
+                text = fetcher(url)
+                if len(text) >= 20 and "<html" not in text.lower():
+                    return text
+                last = ValueError("unerwartete Antwort (kein CSV)")
+            except (OSError, ValueError, subprocess.SubprocessError) as e:
+                last = e
+        if attempt == 1:
+            time.sleep(3)
+    if isinstance(last, (OSError, ValueError)):
+        raise last
+    raise OSError(str(last))   # z.B. subprocess.TimeoutExpired -> als OSError
 
 
 def parse_fred(csv):
