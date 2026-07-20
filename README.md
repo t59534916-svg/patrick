@@ -42,8 +42,17 @@ oder lokaler Server) **oder im Browser** (auch online) aufrufbar.
 | VIX | `VIXCLS` | Niveau + Perzentil |
 
 **Manuell gepflegt** (aus Monats-Releases / FOMC — werden vom Skript **nicht**
-überschrieben): **ISM-Niveau**, **ISM-Δ**, **Fed-Bias**. Diese direkt in der
-Oberfläche ändern; die Werte bleiben beim nächsten Auto-Update erhalten.
+überschrieben): **ISM-Niveau**, **ISM-Δ**, **Fed-Bias**. Dauerhaft setzen:
+
+```bash
+python update_terminal.py --no-fetch --set ism=49.8 --set ismDelta=-1.2 --set fedBias=0
+```
+
+(`--no-fetch` = nur schreiben, ohne FRED-Abruf; ohne die Option wird zusätzlich
+aktualisiert.) Eingaben direkt in der Oberfläche gelten nur für die laufende
+Sitzung — der 30-Minuten-Reload bewahrt sie zwar für ISM/ISM-Δ/Fed-Bias,
+gespeichert wird aber nur über `--set`. Für Szenario-Spielereien an den übrigen
+Feldern das Auto-Update in der Oberfläche auf AUS stellen.
 
 ---
 
@@ -153,13 +162,15 @@ jedem Gerät im Browser abrufbar ist:
 2. **GitHub Pages** aktivieren: *Settings → Pages → Source: Branch `main`*.
    Danach ist das Terminal unter
    `https://<user>.github.io/<repo>/sektor-regime-terminal.html` erreichbar.
-3. Der Workflow `.github/workflows/update.yml` läuft (nach dem Merge in `main`)
-   werktags automatisch, holt frische FRED-Daten und committet sie. Manuell
-   auslösbar unter *Actions → „Terminal-Daten aktualisieren" → Run workflow*.
-   Zeitplan (`cron:`) in der Datei nach Bedarf anpassen.
+3. Der Workflow `.github/workflows/update.yml` läuft werktags automatisch
+   (22:30 UTC), holt frische FRED-Daten und committet sie — **nur bei echter
+   Datenänderung** (der Zeitstempel allein löst keinen Commit aus, `main`
+   bleibt also ruhig). Manuell auslösbar unter *Actions → „Terminal-Daten
+   aktualisieren" → Run workflow*. Zeitplan (`cron:`) nach Bedarf anpassen.
 
 Auf GitHub Pages lädt die Seite `livedata.json` sauber nach (gleiche Herkunft) —
-der Datenstand entspricht dem letzten Workflow-Lauf.
+der angezeigte „Datenstand" (deutsche Zeit) entspricht der letzten tatsächlichen
+Datenänderung, nicht dem letzten Prüf-Lauf.
 
 ---
 

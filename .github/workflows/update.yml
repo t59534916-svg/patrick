@@ -1,12 +1,17 @@
 name: Terminal-Daten aktualisieren
 
 # Holt zeitgesteuert die aktuellen FRED-Makrodaten und committet die
-# aktualisierten Dateien (livedata.json + eingebetteter Block in der HTML).
-# In Verbindung mit GitHub Pages ist das Terminal so von ueberall im Browser
-# erreichbar und haelt sich selbst aktuell -- ganz ohne laufenden lokalen Rechner.
+# aktualisierten Dateien (livedata.json + eingebetteter Block in der HTML) --
+# aber nur, wenn sich ausser dem Zeitstempel (asOf) tatsaechlich etwas
+# geaendert hat. In Verbindung mit GitHub Pages ist das Terminal so von
+# ueberall im Browser erreichbar und haelt sich selbst aktuell.
 #
-# Hinweis: Zeitplan-Workflows laufen nur auf dem Standard-Branch. Diese Datei
-# wird also erst aktiv, nachdem sie in den Default-Branch (main) gemergt ist.
+# Hinweise:
+# - Zeitplan-Workflows laufen nur auf dem Standard-Branch (main).
+# - Der Commit traegt bewusst KEIN "[skip ci]": Es existiert kein
+#   push-getriggerter Workflow, und Pushes mit GITHUB_TOKEN loesen ohnehin
+#   keine weiteren Workflow-Laeufe aus. Ein "[skip ci]" wuerde nichts nuetzen,
+#   koennte aber schlimmstenfalls den GitHub-Pages-Build unterdruecken.
 
 on:
   schedule:
@@ -19,6 +24,9 @@ permissions:
 concurrency:
   group: update-terminal
   cancel-in-progress: false
+
+env:
+  TZ: Europe/Berlin            # Zeitstempel (asOf) in deutscher Lokalzeit
 
 jobs:
   update:
@@ -33,14 +41,23 @@ jobs:
       - name: FRED-Daten holen und Dateien aktualisieren
         run: python update_terminal.py || echo "Teil-/Totalausfall - alte Werte bleiben erhalten"
 
-      - name: Aenderungen committen (nur falls vorhanden)
+      - name: Committen nur bei echter Datenaenderung
         run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- livedata.json sektor-regime-terminal.html; then
+          # livedata.json hat ein Feld pro Zeile. Diff-Zeilen, die nicht den
+          # Zeitstempel (asOf) betreffen, bedeuten eine echte Datenaenderung --
+          # nur dann lohnt ein Commit. So bleibt main frei von reinen
+          # Zeitstempel-Commits, und der "Datenstand" auf der Online-Seite
+          # entspricht der letzten tatsaechlichen Datenaenderung.
+          CHANGED=$(git diff -U0 -- livedata.json | grep -E '^[-+][^-+]' | grep -v '"asOf"' || true)
+          if [ -n "$CHANGED" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
             git add livedata.json sektor-regime-terminal.html
-            git commit -m "chore: Terminal-Daten aktualisiert (FRED) [skip ci]"
+            git commit -m "chore: Terminal-Daten aktualisiert (FRED)"
             git push
+            echo "Datenaenderung committet:"
+            echo "$CHANGED"
           else
-            echo "Keine Datenaenderung - kein Commit."
+            echo "Keine Datenaenderung (nur Zeitstempel) - kein Commit."
+            git checkout -- livedata.json sektor-regime-terminal.html
           fi

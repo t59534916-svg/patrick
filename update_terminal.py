@@ -15,11 +15,18 @@ Nur Python-Standardbibliothek, keine Installation noetig (Python >= 3.8).
 
 Manuell gepflegte Felder (ISM, ISM-Delta, Fed-Bias) werden aus der bestehenden
 Datei uebernommen und NICHT ueberschrieben -- diese stammen aus Monats-Releases
-bzw. FOMC-Entscheiden und werden von Hand aktualisiert.
+bzw. FOMC-Entscheiden. Dauerhaft setzen laesst sich so ein Feld per
+
+    python update_terminal.py --no-fetch --set ism=49.8 --set fedBias=0
+
+(--no-fetch: nur schreiben, kein FRED-Abruf; ohne --no-fetch wird zusaetzlich
+aktualisiert). Eingaben in der Browser-Oberflaeche gelten dagegen nur fuer die
+laufende Sitzung.
 
 Per Cron / Aufgabenplaner regelmaessig aufrufen (siehe README.md).
 """
 
+import argparse
 import json
 import os
 import re
@@ -49,6 +56,8 @@ SERIES = {
 
 # Defaults fuer manuell gepflegte Felder (nur falls in der Datei nichts steht)
 MANUAL_DEFAULTS = {"ism": 53.3, "ismDelta": -0.7, "fedBias": 1}
+# Per --set aenderbare Felder und ihr Typ (fedBias zusaetzlich auf -1/0/1 geprueft)
+MANUAL_KEYS = {"ism": float, "ismDelta": float, "fedBias": int}
 
 
 # ---------------------------------------------------------------------------
@@ -239,16 +248,60 @@ def write_html(j):
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
-def main():
-    j, errs, got = collect()
+def parse_sets(pairs):
+    """--set FELD=WERT validieren -> dict. Bricht mit Exit-Code 2 bei Fehlern ab."""
+    out = {}
+    for p in pairs:
+        if "=" not in p:
+            sys.exit("Fehler: --set erwartet FELD=WERT, bekam: {!r}".format(p))
+        k, v = p.split("=", 1)
+        if k not in MANUAL_KEYS:
+            sys.exit("Fehler: --set kennt nur {} (bekam: {!r})".format(
+                ", ".join(sorted(MANUAL_KEYS)), k))
+        try:
+            val = MANUAL_KEYS[k](v)
+        except ValueError:
+            sys.exit("Fehler: ungueltiger Wert fuer {}: {!r}".format(k, v))
+        if k == "fedBias" and val not in (-1, 0, 1):
+            sys.exit("Fehler: fedBias muss -1, 0 oder 1 sein (bekam: {})".format(val))
+        out[k] = val
+    return out
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        description="Aktualisiert das Sektor-Regime-Terminal mit FRED-Daten.")
+    ap.add_argument("--set", action="append", default=[], metavar="FELD=WERT",
+                    help="manuelles Feld dauerhaft setzen ({}); mehrfach nutzbar".format(
+                        ", ".join(sorted(MANUAL_KEYS))))
+    ap.add_argument("--no-fetch", action="store_true",
+                    help="kein FRED-Abruf; nur --set anwenden und Dateien schreiben")
+    args = ap.parse_args(argv)
+    overrides = parse_sets(args.set)
+
+    if args.no_fetch:
+        j = load_existing()
+        for k, dv in MANUAL_DEFAULTS.items():
+            j.setdefault(k, dv)
+        errs, got = [], 0
+        if overrides:
+            j["asOf"] = datetime.now().astimezone().strftime("%d.%m.%Y %H:%M")
+    else:
+        j, errs, got = collect()
+    j.update(overrides)
+
     write_json(j)
     html_ok = write_html(j)
 
     stamp = j.get("asOf", "?")
-    if got:
+    if args.no_fetch:
+        msg = "OK   kein Abruf (--no-fetch) - Stand {}".format(stamp)
+    elif got:
         msg = "OK   {}/6 Serien aktualisiert - Stand {}".format(got, stamp)
     else:
         msg = "WARN keine Serie erreichbar - alte Werte behalten - Stand {}".format(stamp)
+    if overrides:
+        msg += " - gesetzt: " + ", ".join("{}={}".format(k, v) for k, v in overrides.items())
     if errs:
         msg += " - Fehler: " + ", ".join(errs)
     if not html_ok:
@@ -259,7 +312,7 @@ def main():
               j.get("cpi"), j.get("core"), j.get("nfp"), j.get("vix"),
               j.get("cpiTrend"), j.get("oilTrend"), j.get("realYield"),
               j.get("ism"), j.get("fedBias")))
-    return 0 if got else 1
+    return 0 if (got or args.no_fetch) else 1
 
 
 if __name__ == "__main__":

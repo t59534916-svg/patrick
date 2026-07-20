@@ -94,7 +94,7 @@ tr.sec:hover td{background:var(--panel2)}
       <div class="inp"><label>10y-Realzins-Richtung</label><select id="ry"><option value="1" selected>steigend</option><option value="0">seitw&auml;rts</option><option value="-1">fallend</option></select></div>
       <div class="inp"><label>VIX (Niveau)</label><input type="number" id="vix" value="18" step="0.1"></div>
       <button id="liveBtn" onclick="directUpdate()">&#9654; DATEN AKTUALISIEREN (FRED direkt)</button>
-<button id="wsBtn" onclick="liveUpdate()" style="margin-top:6px;background:var(--p2,#161614);border:1px solid var(--line);color:var(--mut)">Alternative: Claude-Websuche (nur in Claude.ai)</button>
+<button id="wsBtn" onclick="liveUpdate()" style="margin-top:6px;background:var(--p2,#161614);border:1px solid var(--line);color:var(--muted)">Alternative: Claude-Websuche (nur in Claude.ai)</button>
 <div class="inp" style="margin-top:8px"><label>Auto-Update (beim &Ouml;ffnen + alle 30 Min)</label>
 <select id="autoUpd"><option value="1" selected>AN</option><option value="0">AUS</option></select></div>
       <div class="status" id="status">Werte manuell editierbar &ndash; Engine rechnet sofort neu.</div>
@@ -385,13 +385,22 @@ async function directUpdate(){
 // Wird nur gefunden, wenn die Seite ueber einen lokalen Server (http://localhost)
 // geoeffnet ist. Beim direkten Datei-Aufruf (file://) blockt Chrome den Zugriff -->
 // dann greifen automatisch die eingebetteten Werte, die das Skript ebenfalls pflegt.
-async function loadLocalData(){
+async function loadLocalData(initial){
   try{
     const r = await fetch('livedata.json?ts='+Date.now(), {cache:'no-store'});
     if(!r.ok) return false;
     const j = await r.json();
     if(j && (j.cpi!==undefined || j.vix!==undefined)){
-      applyData(j, 'auto (lokales Skript)');
+      if(!initial){
+        // Folge-Reloads (30-Min-Timer): manuell gepflegte Felder aus dem
+        // Formular bewahren (wie directUpdate) -- laufende Szenario-Eingaben
+        // zu ISM/Fed nicht ueberschreiben. Initial ist die Datei fuehrend.
+        j.ism=+document.getElementById('ism').value;
+        j.ismDelta=+document.getElementById('ismD').value;
+        j.fedBias=+document.getElementById('fed').value;
+      }
+      const lbl = location.hostname.endsWith('github.io') ? 'auto (GitHub-Workflow)' : 'auto (lokales Skript)';
+      applyData(j, lbl);
       render();
       return true;
     }
@@ -404,10 +413,10 @@ async function loadLocalData(){
 // 2) FRED direkt im Browser (CORS-Proxys, wackelig)
 // 3) eingebettete Werte (immer vorhanden, vom Skript mitgepflegt)
 let autoTimer=null;
-async function autoUpdate(silent){
+async function autoUpdate(initial){
   if(document.getElementById('autoUpd').value!=='1')return;
   const st=document.getElementById('status');
-  if(await loadLocalData()){
+  if(await loadLocalData(initial)){
     st.className='status ok';
     st.textContent='Daten aus livedata.json (lokales Update-Skript) uebernommen \u00b7 '+
       (document.getElementById('stamp').textContent.replace('Datenstand: ','')||'');
@@ -425,11 +434,12 @@ async function autoUpdate(silent){
 }
 document.getElementById('autoUpd').addEventListener('change',()=>{
   if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
-  if(document.getElementById('autoUpd').value==='1'){autoUpdate(true);autoTimer=setInterval(()=>autoUpdate(true),30*60*1000);}
+  // Einschalten = bewusster Voll-Resync (initial=true); Timer-Ticks bewahren manuelle Felder.
+  if(document.getElementById('autoUpd').value==='1'){autoUpdate(true);autoTimer=setInterval(()=>autoUpdate(false),30*60*1000);}
 });
 window.addEventListener('load',()=>{
   setTimeout(()=>{autoUpdate(true);},600);
-  autoTimer=setInterval(()=>autoUpdate(true),30*60*1000);
+  autoTimer=setInterval(()=>autoUpdate(false),30*60*1000);
 });
 </script>
 </body>
