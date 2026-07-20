@@ -34,7 +34,7 @@ def try_update():
     try:
         import update_terminal
         print("[serve] Hole aktuelle Daten (FRED) ...")
-        update_terminal.main()
+        update_terminal.main([])   # [] = eigene CLI-Argumente nicht durchreichen
     except Exception as e:
         print("[serve] Update uebersprungen ({}: {}) -- nutze vorhandene Werte.".format(
             type(e).__name__, e))
