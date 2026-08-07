@@ -4,12 +4,12 @@
   "cpi": 3.5,
   "core": 2.6,
   "cpiTrend": 1,
-  "nfp": 57,
+  "nfp": -23,
   "fedBias": 1,
   "oilTrend": -1,
-  "vix": 15.8,
+  "vix": 15.2,
   "realYield": 1,
-  "asOf": "07.08.2026 03:36",
+  "asOf": "08.08.2026 01:03",
   "source": "auto",
-  "vixPct": 0.4
+  "vixPct": 0.36
 }
