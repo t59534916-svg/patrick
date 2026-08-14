@@ -8,8 +8,8 @@
   "fedBias": 1,
   "oilTrend": -1,
   "vix": 14.6,
-  "realYield": 1,
-  "asOf": "14.08.2026 01:10",
+  "realYield": 0,
+  "asOf": "15.08.2026 00:46",
   "source": "auto",
-  "vixPct": 0.31
+  "vixPct": 0.32
 }
