@@ -6,10 +6,10 @@
   "cpiTrend": -1,
   "nfp": 162,
   "fedBias": 1,
-  "oilTrend": -1,
-  "vix": 15.7,
+  "oilTrend": 1,
+  "vix": 16.5,
   "realYield": 0,
-  "asOf": "10.09.2026 02:22",
+  "asOf": "11.09.2026 02:18",
   "source": "auto",
-  "vixPct": 0.4
+  "vixPct": 0.47
 }
