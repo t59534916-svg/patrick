@@ -4,12 +4,12 @@
   "cpi": 3.7,
   "core": 2.6,
   "cpiTrend": 1,
-  "nfp": 29,
+  "nfp": 165,
   "fedBias": 1,
   "oilTrend": 1,
-  "vix": 16.6,
+  "vix": 28.2,
   "realYield": -1,
-  "asOf": "06.11.2026 03:39",
+  "asOf": "07.11.2026 03:07",
   "source": "auto",
-  "vixPct": 0.48
+  "vixPct": 0.92
 }
